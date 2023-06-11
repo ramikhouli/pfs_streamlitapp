@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.title('Dynamic Pressure Profile')
+st.title('Dynamic Prcdessure Profile')
 st.sidebar.title('Inputs')
 
 k = st.sidebar.slider('Perm(md)', min_value=10, max_value=200, value=100)
