@@ -19,9 +19,9 @@ def load_saved_data():
 def simulate_injection_change(data, injection_well, rate_change, injection_type):
     modified_data = data.copy()
     if injection_type == 'WI':
-        injection_rate_col = f'{injection_well}_WI Rate, b/d'
+        injection_rate_col = f'{injection_well}_WI_Rate__b_d'
     else:
-        injection_rate_col = f'{injection_well}_GI Rate, MMscf/d'
+        injection_rate_col = f'{injection_well}_GI_Rate__MMscf_d'
     if injection_rate_col in modified_data.columns:
         modified_data[injection_rate_col] *= (1 + rate_change/100)
     return modified_data
@@ -45,8 +45,8 @@ def main():
     st.sidebar.write(f"Number of target columns: {len(target_cols)}")
 
     # Identify injection wells
-    wi_wells = [col.split('_')[0] for col in test_data.columns if col.endswith('_WI Rate, b/d')]
-    gi_wells = [col.split('_')[0] for col in test_data.columns if col.endswith('_GI Rate, MMscf/d')]
+    wi_wells = [col.split('_')[0] for col in test_data.columns if col.endswith('_WI_Rate__b_d')]
+    gi_wells = [col.split('_')[0] for col in test_data.columns if col.endswith('_GI_Rate__MMscf_d')]
     injection_wells = wi_wells + gi_wells
 
     if not injection_wells:
@@ -93,7 +93,7 @@ def main():
 
     # Display injection well information
     st.header('Injection Well Information')
-    injection_rate_col = f'{selected_injection_well}_{"WI Rate, b/d" if injection_type == "WI" else "GI Rate, MMscf/d"}'
+    injection_rate_col = f'{selected_injection_well}_{"WI_Rate__b_d" if injection_type == "WI" else "GI_Rate__MMscf_d"}'
     if injection_rate_col in test_data.columns:
         st.write(f"Average Injection Rate for {selected_injection_well} (Baseline): {test_data[injection_rate_col].mean():.2f} {'b/d' if injection_type == 'WI' else 'MMscf/d'}")
         st.write(f"Average Injection Rate for {selected_injection_well} (Modified): {modified_data[injection_rate_col].mean():.2f} {'b/d' if injection_type == 'WI' else 'MMscf/d'}")
