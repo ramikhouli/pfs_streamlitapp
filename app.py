@@ -97,12 +97,13 @@ def main():
                 st.write(f"  Modified Forecast: {modified_forecast.loc[test_data.index, col].mean():.2f}%")
 
             # Calculate and display RMSE for test set
-            baseline_rmse = np.sqrt(mean_squared_error(test_data[watercut_cols], baseline_forecast.loc[test_data.index, watercut_cols]))
-            modified_rmse = np.sqrt(mean_squared_error(test_data[watercut_cols], modified_forecast.loc[test_data.index, watercut_cols]))
+            for col in watercut_cols:
+                baseline_rmse = np.sqrt(mean_squared_error(test_data[col], baseline_forecast.loc[test_data.index, col]))
+                modified_rmse = np.sqrt(mean_squared_error(test_data[col], modified_forecast.loc[test_data.index, col]))
 
-            st.write(f"RMSE (Test Set):")
-            st.write(f"  Baseline Forecast: {baseline_rmse:.2f}")
-            st.write(f"  Modified Forecast: {modified_rmse:.2f}")
+                st.write(f"RMSE for {col} (Test Set):")
+                st.write(f"  Baseline Forecast: {baseline_rmse:.2f}")
+                st.write(f"  Modified Forecast: {modified_rmse:.2f}")
 
         else:
             st.error(f"No water cut data available for {selected_producing_well}")
