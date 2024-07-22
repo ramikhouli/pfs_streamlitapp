@@ -8,12 +8,12 @@ from sklearn.metrics import mean_squared_error
 
 @st.cache_resource
 def load_saved_data():
-    full_data = pd.read_pickle('/mnt/data/test_data.pkl')
-    with open('/mnt/data/models.pkl', 'rb') as f:
+    full_data = pd.read_pickle('test_data.pkl')  # Rename this to full_data as it contains all data
+    with open('models.pkl', 'rb') as f:
         models = pickle.load(f)
-    with open('/mnt/data/feature_cols.pkl', 'rb') as f:
+    with open('feature_cols.pkl', 'rb') as f:
         feature_cols = pickle.load(f)
-    with open('/mnt/data/target_cols.pkl', 'rb') as f:
+    with open('target_cols.pkl', 'rb') as f:
         target_cols = pickle.load(f)
     return full_data, models, feature_cols, target_cols
 
@@ -21,7 +21,7 @@ def simulate_injection_change(data, injection_well, rate_change):
     modified_data = data.copy()
     injection_rate_cols = [col for col in data.columns if col.startswith(f'{injection_well}_') and ('WI_Rate' in col or 'GI_Rate' in col)]
     for col in injection_rate_cols:
-        modified_data[col] *= (1 + rate_change / 100)
+        modified_data[col] *= (1 + rate_change/100)
     return modified_data
 
 def forecast(models, data, feature_cols):
@@ -68,21 +68,21 @@ def main():
     else:
         selected_producing_well = st.selectbox('Select Producing Well to Visualize', producing_wells)
         watercut_cols = [col for col in full_data.columns if col.startswith(f'{selected_producing_well}_') and col.endswith('_WaterCut')]
-
+        
         if watercut_cols:
             fig, ax = plt.subplots(figsize=(12, 6))
             for col in watercut_cols:
-                # Plot training data
-                ax.plot(train_data['Date'], train_data[col], label=f'Training Actual {col}', alpha=0.5)
-                # Plot testing data
-                ax.plot(test_data['Date'], test_data[col], label=f'Testing Actual {col}', linewidth=2)
-                # Plot baseline forecast for testing data
-                ax.plot(test_data['Date'], baseline_forecast.loc[test_data.index, col], label=f'Baseline Forecast {col}', linestyle='--', linewidth=2)
-                # Plot modified forecast for testing data
-                ax.plot(test_data['Date'], modified_forecast.loc[test_data.index, col], label=f'Modified Forecast {col}', linestyle=':', linewidth=2)
+                # Plot full dataset
+                ax.plot(full_data['Date'], full_data[col], label=f'Actual {col}', alpha=0.5)
+                ax.plot(full_data['Date'], baseline_forecast[col], label=f'Baseline Forecast {col}', linestyle='--', alpha=0.5)
+                ax.plot(full_data['Date'], modified_forecast[col], label=f'Modified Forecast {col}', linestyle=':', alpha=0.5)
+                
+                # Highlight test data
+                ax.plot(test_data['Date'], test_data[col], label=f'Actual Test {col}', linewidth=2)
+                ax.plot(test_data['Date'], baseline_forecast.loc[test_data.index, col], label=f'Baseline Test Forecast {col}', linestyle='--', linewidth=2)
+                ax.plot(test_data['Date'], modified_forecast.loc[test_data.index, col], label=f'Modified Test Forecast {col}', linestyle=':', linewidth=2)
 
             ax.axvline(x=test_data['Date'].iloc[0], color='r', linestyle='--', label='Train-Test Split')
-            ax.set_xlim([train_data['Date'].min(), test_data['Date'].max()])  # Set x-axis limits based on data range
             ax.set_xlabel('Date')
             ax.set_ylabel(f'Water Cut (%) - {selected_producing_well}')
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -98,13 +98,12 @@ def main():
                 st.write(f"  Modified Forecast: {modified_forecast.loc[test_data.index, col].mean():.2f}%")
 
             # Calculate and display RMSE for test set
-            for col in watercut_cols:
-                baseline_rmse = np.sqrt(mean_squared_error(test_data[col], baseline_forecast.loc[test_data.index, col]))
-                modified_rmse = np.sqrt(mean_squared_error(test_data[col], modified_forecast.loc[test_data.index, col]))
+            baseline_rmse = np.sqrt(mean_squared_error(test_data[col], baseline_forecast.loc[test_data.index, col]))
+            modified_rmse = np.sqrt(mean_squared_error(test_data[col], modified_forecast.loc[test_data.index, col]))
 
-                st.write(f"RMSE for {col} (Test Set):")
-                st.write(f"  Baseline Forecast: {baseline_rmse:.2f}")
-                st.write(f"  Modified Forecast: {modified_rmse:.2f}")
+            st.write(f"RMSE for {col} (Test Set):")
+            st.write(f"  Baseline Forecast: {baseline_rmse:.2f}")
+            st.write(f"  Modified Forecast: {modified_rmse:.2f}")
 
         else:
             st.error(f"No water cut data available for {selected_producing_well}")
