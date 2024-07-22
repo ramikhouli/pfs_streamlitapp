@@ -22,7 +22,7 @@ def load_saved_data():
 
 def simulate_injection_change(data, injection_well, rate_change):
     modified_data = data.copy()
-    injection_rate_col = clean_column_name(f'{injection_well}_WI_Rate')
+    injection_rate_col = f'{injection_well}_WI Rate, b/d'
     if injection_rate_col in modified_data.columns:
         modified_data[injection_rate_col] *= (1 + rate_change/100)
     return modified_data
@@ -47,7 +47,7 @@ def main():
 
     # Sidebar for user inputs
     st.sidebar.header('Injection Well Parameters')
-    injection_wells = [col.split('_')[0] for col in test_data.columns if '_WI_Rate' in col]
+    injection_wells = [col.split('_')[0] for col in test_data.columns if '_WI Rate, b/d' in col]
     if not injection_wells:
         st.sidebar.error("No injection wells found in the data.")
     else:
@@ -61,12 +61,12 @@ def main():
 
         # Visualize results
         st.header('Forecasting Results')
-        producing_wells = [col.split('_')[0] for col in target_cols]
+        producing_wells = [col.split('_')[0] for col in test_data.columns if '_WaterCut' in col]
         if not producing_wells:
             st.error("No producing wells found in the data.")
         else:
             selected_producing_well = st.selectbox('Select Producing Well to Visualize', producing_wells)
-            selected_col = clean_column_name(f'{selected_producing_well}_WaterCut')
+            selected_col = f'{selected_producing_well}_WaterCut'
 
             if selected_col in test_data.columns and selected_col in baseline_forecast.columns:
                 fig, ax = plt.subplots(figsize=(10, 6))
@@ -92,7 +92,7 @@ def main():
 
         # Display injection well information
         st.header('Injection Well Information')
-        injection_rate_col = clean_column_name(f'{selected_injection_well}_WI_Rate')
+        injection_rate_col = f'{selected_injection_well}_WI Rate, b/d'
         if injection_rate_col in test_data.columns:
             st.write(f"Average Injection Rate for {selected_injection_well} (Baseline): {test_data[injection_rate_col].mean():.2f} b/d")
             st.write(f"Average Injection Rate for {selected_injection_well} (Modified): {modified_data[injection_rate_col].mean():.2f} b/d")
