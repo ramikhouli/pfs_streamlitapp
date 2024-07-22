@@ -4,6 +4,10 @@ import pandas as pd
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+import re
+
+def clean_column_name(name):
+    return re.sub(r'[^a-zA-Z0-9_]', '_', name)
 
 # Load saved data and models
 @st.cache_resource
@@ -20,7 +24,7 @@ def load_saved_data():
 # Function to simulate changes in injection well rates
 def simulate_injection_change(data, injection_well, rate_change):
     modified_data = data.copy()
-    injection_rate_col = f'{injection_well}_WI Rate, b/d'
+    injection_rate_col = clean_column_name(f'{injection_well}_WI Rate, b/d')
     if injection_rate_col in modified_data.columns:
         modified_data[injection_rate_col] *= (1 + rate_change/100)
     return modified_data
@@ -40,7 +44,7 @@ def main():
 
     # Sidebar for user inputs
     st.sidebar.header('Injection Well Parameters')
-    injection_wells = [col.split('_')[0] for col in test_data.columns if '_WI Rate, b/d' in col]
+    injection_wells = [col.split('_')[0] for col in test_data.columns if '_WI_Rate' in col]
     selected_injection_well = st.sidebar.selectbox('Select Injection Well', injection_wells)
     injection_rate_change = st.sidebar.slider('Injection Rate Change (%)', -50, 50, 0)
 
@@ -53,26 +57,29 @@ def main():
     st.header('Forecasting Results')
     producing_wells = [col.split('_')[0] for col in target_cols]
     selected_producing_well = st.selectbox('Select Producing Well to Visualize', producing_wells)
-    selected_col = f'{selected_producing_well}_WaterCut'
+    selected_col = clean_column_name(f'{selected_producing_well}_WaterCut')
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(test_data['Date'], test_data[selected_col], label='Actual')
-    ax.plot(test_data['Date'], baseline_forecast[selected_col], label='Baseline Forecast')
-    ax.plot(test_data['Date'], modified_forecast[selected_col], label='Modified Forecast')
-    ax.set_xlabel('Date')
-    ax.set_ylabel(f'Water Cut (%) - {selected_producing_well}')
-    ax.legend()
-    st.pyplot(fig)
+    if selected_col in test_data.columns and selected_col in baseline_forecast.columns:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(test_data['Date'], test_data[selected_col], label='Actual')
+        ax.plot(test_data['Date'], baseline_forecast[selected_col], label='Baseline Forecast')
+        ax.plot(test_data['Date'], modified_forecast[selected_col], label='Modified Forecast')
+        ax.set_xlabel('Date')
+        ax.set_ylabel(f'Water Cut (%) - {selected_producing_well}')
+        ax.legend()
+        st.pyplot(fig)
 
-    # Display summary statistics
-    st.header('Summary Statistics')
-    st.write(f"Average Water Cut for {selected_producing_well} (Actual): {test_data[selected_col].mean():.2f}%")
-    st.write(f"Average Water Cut for {selected_producing_well} (Baseline Forecast): {baseline_forecast[selected_col].mean():.2f}%")
-    st.write(f"Average Water Cut for {selected_producing_well} (Modified Forecast): {modified_forecast[selected_col].mean():.2f}%")
+        # Display summary statistics
+        st.header('Summary Statistics')
+        st.write(f"Average Water Cut for {selected_producing_well} (Actual): {test_data[selected_col].mean():.2f}%")
+        st.write(f"Average Water Cut for {selected_producing_well} (Baseline Forecast): {baseline_forecast[selected_col].mean():.2f}%")
+        st.write(f"Average Water Cut for {selected_producing_well} (Modified Forecast): {modified_forecast[selected_col].mean():.2f}%")
+    else:
+        st.write(f"No data available for {selected_producing_well}")
 
     # Display injection well information
     st.header('Injection Well Information')
-    injection_rate_col = f'{selected_injection_well}_WI Rate, b/d'
+    injection_rate_col = clean_column_name(f'{selected_injection_well}_WI Rate, b/d')
     if injection_rate_col in test_data.columns:
         st.write(f"Average Injection Rate for {selected_injection_well} (Baseline): {test_data[injection_rate_col].mean():.2f} b/d")
         st.write(f"Average Injection Rate for {selected_injection_well} (Modified): {modified_data[injection_rate_col].mean():.2f} b/d")
