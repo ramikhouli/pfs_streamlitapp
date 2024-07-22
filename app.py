@@ -44,6 +44,17 @@ def main():
     st.sidebar.write(f"Number of feature columns: {len(feature_cols)}")
     st.sidebar.write(f"Number of target columns: {len(target_cols)}")
 
+    # New debug prints
+    st.sidebar.write("Available wells:")
+    st.sidebar.write(sorted(list(set([col.split('_')[0] for col in test_data.columns if '_' in col]))))
+
+    st.sidebar.write("WaterCut columns:")
+    st.sidebar.write([col for col in test_data.columns if 'WaterCut' in col])
+
+    st.sidebar.write("Injection Rate columns:")
+    st.sidebar.write([col for col in test_data.columns if 'WI_Rate' in col or 'GI_Rate' in col])
+
+    # Rest of your code...
     # Identify injection wells
     wi_wells = [col.split('_')[0] for col in test_data.columns if col.endswith('_WI_Rate__b_d')]
     gi_wells = [col.split('_')[0] for col in test_data.columns if col.endswith('_GI_Rate__MMscf_d')]
