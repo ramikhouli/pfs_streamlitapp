@@ -68,7 +68,7 @@ def main():
     else:
         selected_producing_well = st.selectbox('Select Producing Well to Visualize', producing_wells)
         watercut_cols = [col for col in full_data.columns if col.startswith(f'{selected_producing_well}_') and col.endswith('_WaterCut')]
-        
+
         if watercut_cols:
             fig, ax = plt.subplots(figsize=(12, 6))
             for col in watercut_cols:
@@ -76,7 +76,7 @@ def main():
                 ax.plot(full_data['Date'], full_data[col], label=f'Actual {col}', alpha=0.5)
                 ax.plot(full_data['Date'], baseline_forecast[col], label=f'Baseline Forecast {col}', linestyle='--', alpha=0.5)
                 ax.plot(full_data['Date'], modified_forecast[col], label=f'Modified Forecast {col}', linestyle=':', alpha=0.5)
-                
+
                 # Highlight test data
                 ax.plot(test_data['Date'], test_data[col], label=f'Actual Test {col}', linewidth=2)
                 ax.plot(test_data['Date'], baseline_forecast.loc[test_data.index, col], label=f'Baseline Test Forecast {col}', linestyle='--', linewidth=2)
