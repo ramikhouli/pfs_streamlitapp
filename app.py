@@ -8,12 +8,12 @@ from sklearn.metrics import mean_squared_error
 
 @st.cache_resource
 def load_saved_data():
-    full_data = pd.read_pickle('test_data.pkl')
-    with open('models.pkl', 'rb') as f:
+    full_data = pd.read_pickle('/mnt/data/test_data.pkl')
+    with open('/mnt/data/models.pkl', 'rb') as f:
         models = pickle.load(f)
-    with open('feature_cols.pkl', 'rb') as f:
+    with open('/mnt/data/feature_cols.pkl', 'rb') as f:
         feature_cols = pickle.load(f)
-    with open('target_cols.pkl', 'rb') as f:
+    with open('/mnt/data/target_cols.pkl', 'rb') as f:
         target_cols = pickle.load(f)
     return full_data, models, feature_cols, target_cols
 
@@ -82,6 +82,7 @@ def main():
                 ax.plot(test_data['Date'], modified_forecast.loc[test_data.index, col], label=f'Modified Forecast {col}', linestyle=':', linewidth=2)
 
             ax.axvline(x=test_data['Date'].iloc[0], color='r', linestyle='--', label='Train-Test Split')
+            ax.set_xlim([train_data['Date'].min(), test_data['Date'].max()])  # Set x-axis limits based on data range
             ax.set_xlabel('Date')
             ax.set_ylabel(f'Water Cut (%) - {selected_producing_well}')
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
