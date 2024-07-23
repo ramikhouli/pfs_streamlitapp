@@ -21,7 +21,7 @@ def simulate_injection_change(data, injection_well, rate_change):
     modified_data = data.copy()
     injection_rate_cols = [col for col in data.columns if col.startswith(f'{injection_well}_') and ('WI_Rate' in col or 'GI_Rate' in col)]
     for col in injection_rate_cols:
-        modified_data[col] *= (1 + rate_change/100)
+        modified_data[col] *= (1 + rate_change / 100)
     return modified_data
 
 def forecast(models, data, feature_cols):
