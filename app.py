@@ -97,12 +97,15 @@ def load_models():
     well_models_gas = {}
     production_wells = [f'J{num:02d}-P' for num in range(1, 69) if num != 68]
     for well in production_wells:
-        well_models_oil[well] = joblib.load(f'models/well_model_oil_{well}.pkl')
-        well_models_water[well] = joblib.load(f'models/well_model_water_{well}.pkl')
-        well_models_gas[well] = joblib.load(f'models/well_model_gas_{well}.pkl')
+        try:
+            well_models_oil[well] = joblib.load(f'models/well_model_oil_{well}.pkl')
+            well_models_water[well] = joblib.load(f'models/well_model_water_{well}.pkl')
+            well_models_gas[well] = joblib.load(f'models/well_model_gas_{well}.pkl')
+        except FileNotFoundError:
+            print(f"Models for well {well} not found. Skipping.")
 
     return global_model_oil, global_model_water, global_model_gas, cluster_models_oil, cluster_models_water, cluster_models_gas, well_models_oil, well_models_water, well_models_gas
-
+    
 def simulate_injection_change(data, injection_well, rate_change):
     modified_data = data.copy()
     injection_rate_cols = [col for col in data.columns if col.startswith(f'{injection_well}_') and ('WI Rate' in col or 'GI Rate' in col)]
