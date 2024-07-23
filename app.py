@@ -1,17 +1,15 @@
 
-%%writefile app.py
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
-import os
+import lightgbm as lgb
 
 @st.cache_resource
 def load_data():
-    data = pd.read_excel('data/all_data_cleaned_final.xlsx')  # Update the path to the correct directory
+    data = pd.read_excel('/content/drive/MyDrive/path_to_your_data/all_data_cleaned_final.xlsx')
     
     columns_to_convert = ['BHP, psia', 'THP, psia']
     for column in columns_to_convert:
@@ -82,41 +80,26 @@ def load_data():
 
 @st.cache_resource
 def load_models():
-    model_files = [
-        'models/global_model_oil_checkpoint.pkl',
-        'models/global_model_water_checkpoint.pkl',
-        'models/global_model_gas_checkpoint.pkl'
-    ] + [f'models/cluster_model_oil_checkpoint_{i}.pkl' for i in range(3)] \
-      + [f'models/cluster_model_water_checkpoint_{i}.pkl' for i in range(3)] \
-      + [f'models/cluster_model_gas_checkpoint_{i}.pkl' for i in range(3)] \
-      + [f'models/well_model_oil_J{num:02d}-P.pkl' for num in range(1, 69) if num != 68] \
-      + [f'models/well_model_water_J{num:02d}-P.pkl' for num in range(1, 69) if num != 68] \
-      + [f'models/well_model_gas_J{num:02d}-P.pkl' for num in range(1, 69) if num != 68]
-
-    for file in model_files:
-        if not os.path.exists(file):
-            raise FileNotFoundError(f"Required model file not found: {file}")
-
-    global_model_oil = joblib.load('models/global_model_oil_checkpoint.pkl')
-    global_model_water = joblib.load('models/global_model_water_checkpoint.pkl')
-    global_model_gas = joblib.load('models/global_model_gas_checkpoint.pkl')
+    global_model_oil = joblib.load('/content/drive/MyDrive/path_to_your_models/global_model_oil_checkpoint.pkl')
+    global_model_water = joblib.load('/content/drive/MyDrive/path_to_your_models/global_model_water_checkpoint.pkl')
+    global_model_gas = joblib.load('/content/drive/MyDrive/path_to_your_models/global_model_gas_checkpoint.pkl')
 
     cluster_models_oil = {}
     cluster_models_water = {}
     cluster_models_gas = {}
     for cluster in range(3):
-        cluster_models_oil[cluster] = joblib.load(f'models/cluster_model_oil_checkpoint_{cluster}.pkl')
-        cluster_models_water[cluster] = joblib.load(f'models/cluster_model_water_checkpoint_{cluster}.pkl')
-        cluster_models_gas[cluster] = joblib.load(f'models/cluster_model_gas_checkpoint_{cluster}.pkl')
+        cluster_models_oil[cluster] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/cluster_model_oil_checkpoint_{cluster}.pkl')
+        cluster_models_water[cluster] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/cluster_model_water_checkpoint_{cluster}.pkl')
+        cluster_models_gas[cluster] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/cluster_model_gas_checkpoint_{cluster}.pkl')
 
     well_models_oil = {}
     well_models_water = {}
     well_models_gas = {}
     production_wells = [f'J{num:02d}-P' for num in range(1, 69) if num != 68]
     for well in production_wells:
-        well_models_oil[well] = joblib.load(f'models/well_model_oil_{well}.pkl')
-        well_models_water[well] = joblib.load(f'models/well_model_water_{well}.pkl')
-        well_models_gas[well] = joblib.load(f'models/well_model_gas_{well}.pkl')
+        well_models_oil[well] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/well_model_oil_{well}.pkl')
+        well_models_water[well] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/well_model_water_{well}.pkl')
+        well_models_gas[well] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/well_model_gas_{well}.pkl')
 
     return global_model_oil, global_model_water, global_model_gas, cluster_models_oil, cluster_models_water, cluster_models_gas, well_models_oil, well_models_water, well_models_gas
 
