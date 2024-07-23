@@ -1,11 +1,13 @@
 
+%%writefile app.py
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
-import lightgbm as lgb
+import os
 
 @st.cache_resource
 def load_data():
@@ -80,6 +82,21 @@ def load_data():
 
 @st.cache_resource
 def load_models():
+    model_files = [
+        'models/global_model_oil_checkpoint.pkl',
+        'models/global_model_water_checkpoint.pkl',
+        'models/global_model_gas_checkpoint.pkl'
+    ] + [f'models/cluster_model_oil_checkpoint_{i}.pkl' for i in range(3)] \
+      + [f'models/cluster_model_water_checkpoint_{i}.pkl' for i in range(3)] \
+      + [f'models/cluster_model_gas_checkpoint_{i}.pkl' for i in range(3)] \
+      + [f'models/well_model_oil_J{num:02d}-P.pkl' for num in range(1, 69) if num != 68] \
+      + [f'models/well_model_water_J{num:02d}-P.pkl' for num in range(1, 69) if num != 68] \
+      + [f'models/well_model_gas_J{num:02d}-P.pkl' for num in range(1, 69) if num != 68]
+
+    for file in model_files:
+        if not os.path.exists(file):
+            raise FileNotFoundError(f"Required model file not found: {file}")
+
     global_model_oil = joblib.load('models/global_model_oil_checkpoint.pkl')
     global_model_water = joblib.load('models/global_model_water_checkpoint.pkl')
     global_model_gas = joblib.load('models/global_model_gas_checkpoint.pkl')
