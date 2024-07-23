@@ -8,14 +8,18 @@ from sklearn.metrics import mean_squared_error
 
 @st.cache_resource
 def load_saved_data():
-    full_data = pd.read_pickle('test_data.pkl')  # Rename this to full_data as it contains all data
-    with open('models.pkl', 'rb') as f:
-        models = pickle.load(f)
-    with open('feature_cols.pkl', 'rb') as f:
-        feature_cols = pickle.load(f)
-    with open('target_cols.pkl', 'rb') as f:
-        target_cols = pickle.load(f)
-    return full_data, models, feature_cols, target_cols
+    try:
+        full_data = pd.read_pickle('test_data.pkl')  # Rename this to full_data as it contains all data
+        with open('models.pkl', 'rb') as f:
+            models = pickle.load(f)
+        with open('feature_cols.pkl', 'rb') as f:
+            feature_cols = pickle.load(f)
+        with open('target_cols.pkl', 'rb') as f:
+            target_cols = pickle.load(f)
+        return full_data, models, feature_cols, target_cols
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return None, None, None, None
 
 def simulate_injection_change(data, injection_well, rate_change):
     modified_data = data.copy()
@@ -34,6 +38,8 @@ def main():
     st.title('Oil Field Management Forecasting Tool')
 
     full_data, models, feature_cols, target_cols = load_saved_data()
+    if full_data is None:
+        return
 
     # Debug information
     st.sidebar.write("Debug Information:")
