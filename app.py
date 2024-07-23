@@ -40,9 +40,7 @@ def main():
     st.sidebar.write(f"Number of columns in full_data: {len(full_data.columns)}")
     st.sidebar.write(f"Number of models: {len(models)}")
     st.sidebar.write(f"Number of feature columns: {len(feature_cols)}")
-    st.sidebar.write(f"Feature columns: {feature_cols}")
     st.sidebar.write(f"Number of target columns: {len(target_cols)}")
-    st.sidebar.write(f"Target columns: {target_cols}")
 
     # Identify injection wells
     injection_wells = sorted(set([col.split('_')[0] for col in full_data.columns if 'WI_Rate' in col or 'GI_Rate' in col]))
