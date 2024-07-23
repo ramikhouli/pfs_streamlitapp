@@ -2,140 +2,123 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
+import pickle
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error
 
-# Set page configuration
-st.set_page_config(page_title="Oil Field Management Forecasting Tool", layout="wide")
-
-# Title
-st.title('Oil Field Management Forecasting Tool')
-
-# Load data and models
 @st.cache_resource
-def load_data_and_models():
-    data = pd.read_excel('data/all_data_cleaned_final.xlsx')
-    global_model_oil = joblib.load('models/global_model_oil_checkpoint.pkl')
-    global_model_water = joblib.load('models/global_model_water_checkpoint.pkl')
-    global_model_gas = joblib.load('models/global_model_gas_checkpoint.pkl')
-    
-    cluster_models_oil = {}
-    cluster_models_water = {}
-    cluster_models_gas = {}
-    for cluster in range(3):
-        cluster_models_oil[cluster] = joblib.load(f'models/cluster_model_oil_checkpoint_{cluster}.pkl')
-        cluster_models_water[cluster] = joblib.load(f'models/cluster_model_water_checkpoint_{cluster}.pkl')
-        cluster_models_gas[cluster] = joblib.load(f'models/cluster_model_gas_checkpoint_{cluster}.pkl')
+def load_saved_data():
+    full_data = pd.read_pickle('test_data.pkl')  # Rename this to full_data as it contains all data
+    with open('models.pkl', 'rb') as f:
+        models = pickle.load(f)
+    with open('feature_cols.pkl', 'rb') as f:
+        feature_cols = pickle.load(f)
+    with open('target_cols.pkl', 'rb') as f:
+        target_cols = pickle.load(f)
+    return full_data, models, feature_cols, target_cols
 
-    well_models_oil = {}
-    well_models_water = {}
-    well_models_gas = {}
-    production_wells = [f'J{num:02d}-P' for num in range(1, 69) if num != 68]
-    for well in production_wells:
-        well_models_oil[well] = joblib.load(f'models/well_model_oil_{well}.pkl')
-        well_models_water[well] = joblib.load(f'models/well_model_water_{well}.pkl')
-        well_models_gas[well] = joblib.load(f'models/well_model_gas_{well}.pkl')
+def simulate_injection_change(data, injection_well, rate_change):
+    modified_data = data.copy()
+    injection_rate_cols = [col for col in data.columns if col.startswith(f'{injection_well}_') and ('WI_Rate' in col or 'GI_Rate' in col)]
+    for col in injection_rate_cols:
+        modified_data[col] *= (1 + rate_change/100)
+    return modified_data
 
-    return data, global_model_oil, global_model_water, global_model_gas, cluster_models_oil, cluster_models_water, cluster_models_gas, well_models_oil, well_models_water, well_models_gas
+def forecast(models, data, feature_cols):
+    forecasts = {}
+    for col, model in models.items():
+        forecasts[col] = model.predict(data[feature_cols])
+    return pd.DataFrame(forecasts, index=data.index)
 
-data, global_model_oil, global_model_water, global_model_gas, cluster_models_oil, cluster_models_water, cluster_models_gas, well_models_oil, well_models_water, well_models_gas = load_data_and_models()
+def main():
+    st.title('Oil Field Management Forecasting Tool')
 
-# Sidebar
-st.sidebar.header('Well Selection')
-selected_well = st.sidebar.selectbox('Select a well', data['WellName'].unique())
+    full_data, models, feature_cols, target_cols = load_saved_data()
 
-st.sidebar.header('Date Range')
-min_date = data['Date'].min()
-max_date = data['Date'].max()
-start_date = st.sidebar.date_input('Start date', min_date, min_value=min_date, max_value=max_date)
-end_date = st.sidebar.date_input('End date', max_date, min_value=min_date, max_value=max_date)
+    # Debug information
+    st.sidebar.write("Debug Information:")
+    st.sidebar.write(f"Number of columns in full_data: {len(full_data.columns)}")
+    st.sidebar.write(f"Number of models: {len(models)}")
+    st.sidebar.write(f"Number of feature columns: {len(feature_cols)}")
+    st.sidebar.write(f"Number of target columns: {len(target_cols)}")
 
-# Filter data
-filtered_data = data[(data['WellName'] == selected_well) & 
-                     (data['Date'] >= pd.Timestamp(start_date)) & 
-                     (data['Date'] <= pd.Timestamp(end_date))]
+    # Identify injection wells
+    injection_wells = sorted(set([col.split('_')[0] for col in full_data.columns if 'WI_Rate' in col or 'GI_Rate' in col]))
 
-# Prepare features
-def prepare_features(data):
-    features = data.drop(['Oil, stb/d', 'Water, b/d', 'Gas, MMscf/d', 'Date', 'Actual Water Cut', 'Actual GOR', 'Actual WOR'], axis=1)
-    return features
+    # Sidebar for user inputs
+    st.sidebar.header('Injection Well Parameters')
+    selected_injection_well = st.sidebar.selectbox('Select Injection Well', injection_wells)
+    injection_rate_change = st.sidebar.slider('Injection Rate Change (%)', -50, 50, 0)
 
-features = prepare_features(filtered_data)
+    # Split the full_data into train and test sets (last 30% as test)
+    test_size = int(0.3 * len(full_data))
+    train_data = full_data.iloc[:-test_size]
+    test_data = full_data.iloc[-test_size:]
 
-# Make predictions
-well_cluster = filtered_data['WellCluster'].iloc[0]
+    # Run baseline and modified forecasts on the full dataset
+    baseline_forecast = forecast(models, full_data, feature_cols)
+    modified_data = simulate_injection_change(full_data, selected_injection_well, injection_rate_change)
+    modified_forecast = forecast(models, modified_data, feature_cols)
 
-global_pred_oil = global_model_oil.predict(features)
-global_pred_water = global_model_water.predict(features)
-global_pred_gas = global_model_gas.predict(features)
+    # Visualize results
+    st.header('Forecasting Results')
+    producing_wells = sorted(set([col.split('_')[0] for col in full_data.columns if '_WaterCut' in col]))
+    if not producing_wells:
+        st.error("No producing wells found in the data.")
+    else:
+        selected_producing_well = st.selectbox('Select Producing Well to Visualize', producing_wells)
+        watercut_cols = [col for col in full_data.columns if col.startswith(f'{selected_producing_well}_') and col.endswith('_WaterCut')]
+        
+        if watercut_cols:
+            fig, ax = plt.subplots(figsize=(12, 6))
+            for col in watercut_cols:
+                # Plot full dataset
+                ax.plot(full_data['Date'], full_data[col], label=f'Actual {col}', alpha=0.5)
+                ax.plot(full_data['Date'], baseline_forecast[col], label=f'Baseline Forecast {col}', linestyle='--', alpha=0.5)
+                ax.plot(full_data['Date'], modified_forecast[col], label=f'Modified Forecast {col}', linestyle=':', alpha=0.5)
+                
+                # Highlight test data
+                ax.plot(test_data['Date'], test_data[col], label=f'Actual Test {col}', linewidth=2)
+                ax.plot(test_data['Date'], baseline_forecast.loc[test_data.index, col], label=f'Baseline Test Forecast {col}', linestyle='--', linewidth=2)
+                ax.plot(test_data['Date'], modified_forecast.loc[test_data.index, col], label=f'Modified Test Forecast {col}', linestyle=':', linewidth=2)
 
-cluster_pred_oil = cluster_models_oil[well_cluster].predict(features)
-cluster_pred_water = cluster_models_water[well_cluster].predict(features)
-cluster_pred_gas = cluster_models_gas[well_cluster].predict(features)
+            ax.axvline(x=test_data['Date'].iloc[0], color='r', linestyle='--', label='Train-Test Split')
+            ax.set_xlabel('Date')
+            ax.set_ylabel(f'Water Cut (%) - {selected_producing_well}')
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.tight_layout()
+            st.pyplot(fig)
 
-well_pred_oil = well_models_oil[selected_well].predict(features)
-well_pred_water = well_models_water[selected_well].predict(features)
-well_pred_gas = well_models_gas[selected_well].predict(features)
+            # Display summary statistics
+            st.header('Summary Statistics (Test Set)')
+            for col in watercut_cols:
+                st.write(f"Average Water Cut for {col}:")
+                st.write(f"  Actual: {test_data[col].mean():.2f}%")
+                st.write(f"  Baseline Forecast: {baseline_forecast.loc[test_data.index, col].mean():.2f}%")
+                st.write(f"  Modified Forecast: {modified_forecast.loc[test_data.index, col].mean():.2f}%")
 
-oil_predictions = (global_pred_oil + cluster_pred_oil + well_pred_oil) / 3
-water_predictions = (global_pred_water + cluster_pred_water + well_pred_water) / 3
-gas_predictions = (global_pred_gas + cluster_pred_gas + well_pred_gas) / 3
+            # Calculate and display RMSE for test set
+            baseline_rmse = np.sqrt(mean_squared_error(test_data[col], baseline_forecast.loc[test_data.index, col]))
+            modified_rmse = np.sqrt(mean_squared_error(test_data[col], modified_forecast.loc[test_data.index, col]))
 
-# Visualizations
-st.header(f'Production Forecasts for Well {selected_well}')
+            st.write(f"RMSE for {col} (Test Set):")
+            st.write(f"  Baseline Forecast: {baseline_rmse:.2f}")
+            st.write(f"  Modified Forecast: {modified_rmse:.2f}")
 
-fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 18))
+        else:
+            st.error(f"No water cut data available for {selected_producing_well}")
 
-# Oil production plot
-ax1.scatter(filtered_data['Date'], filtered_data['Oil, stb/d'], label='Actual', alpha=0.7)
-ax1.plot(filtered_data['Date'], oil_predictions, label='Predicted', color='red')
-ax1.set_title('Oil Production')
-ax1.set_xlabel('Date')
-ax1.set_ylabel('Oil Production (stb/d)')
-ax1.legend()
+    # Display injection well information
+    st.header('Injection Well Information (Test Set)')
+    injection_rate_cols = [col for col in test_data.columns if col.startswith(f'{selected_injection_well}_') and ('WI_Rate' in col or 'GI_Rate' in col)]
+    if injection_rate_cols:
+        for col in injection_rate_cols:
+            rate_type = 'b/d' if 'WI_Rate' in col else 'MMscf/d'
+            st.write(f"Average Injection Rate for {col}:")
+            st.write(f"  Baseline: {test_data[col].mean():.2f} {rate_type}")
+            st.write(f"  Modified: {modified_data.loc[test_data.index, col].mean():.2f} {rate_type}")
+    else:
+        st.error(f"No injection rate data available for {selected_injection_well}")
 
-# Water production plot
-ax2.scatter(filtered_data['Date'], filtered_data['Water, b/d'], label='Actual', alpha=0.7)
-ax2.plot(filtered_data['Date'], water_predictions, label='Predicted', color='red')
-ax2.set_title('Water Production')
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Water Production (b/d)')
-ax2.legend()
-
-# Gas production plot
-ax3.scatter(filtered_data['Date'], filtered_data['Gas, MMscf/d'], label='Actual', alpha=0.7)
-ax3.plot(filtered_data['Date'], gas_predictions, label='Predicted', color='red')
-ax3.set_title('Gas Production')
-ax3.set_xlabel('Date')
-ax3.set_ylabel('Gas Production (MMscf/d)')
-ax3.legend()
-
-plt.tight_layout()
-st.pyplot(fig)
-
-# Summary statistics
-st.header('Summary Statistics')
-st.write(f"Average Oil Production (Actual): {filtered_data['Oil, stb/d'].mean():.2f} stb/d")
-st.write(f"Average Oil Production (Predicted): {oil_predictions.mean():.2f} stb/d")
-st.write(f"Average Water Production (Actual): {filtered_data['Water, b/d'].mean():.2f} b/d")
-st.write(f"Average Water Production (Predicted): {water_predictions.mean():.2f} b/d")
-st.write(f"Average Gas Production (Actual): {filtered_data['Gas, MMscf/d'].mean():.2f} MMscf/d")
-st.write(f"Average Gas Production (Predicted): {gas_predictions.mean():.2f} MMscf/d")
-
-# Performance metrics
-st.header('Model Performance Metrics')
-oil_rmse = np.sqrt(mean_squared_error(filtered_data['Oil, stb/d'], oil_predictions))
-water_rmse = np.sqrt(mean_squared_error(filtered_data['Water, b/d'], water_predictions))
-gas_rmse = np.sqrt(mean_squared_error(filtered_data['Gas, MMscf/d'], gas_predictions))
-
-oil_r2 = r2_score(filtered_data['Oil, stb/d'], oil_predictions)
-water_r2 = r2_score(filtered_data['Water, b/d'], water_predictions)
-gas_r2 = r2_score(filtered_data['Gas, MMscf/d'], gas_predictions)
-
-st.write(f"Oil RMSE: {oil_rmse:.2f}")
-st.write(f"Water RMSE: {water_rmse:.2f}")
-st.write(f"Gas RMSE: {gas_rmse:.2f}")
-st.write(f"Oil R-squared: {oil_r2:.2f}")
-st.write(f"Water R-squared: {water_r2:.2f}")
-st.write(f"Gas R-squared: {gas_r2:.2f}")
+if __name__ == "__main__":
+    main()
