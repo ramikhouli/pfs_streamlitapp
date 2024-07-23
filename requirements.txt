@@ -5,7 +5,6 @@ pandas
 scikit-learn
 lightgbm
 openpyxl
-numpy
 lightgbm
 matplotlib
 dtaidistance
