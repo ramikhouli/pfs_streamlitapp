@@ -9,7 +9,7 @@ import lightgbm as lgb
 
 @st.cache_resource
 def load_data():
-    data = pd.read_excel('/content/drive/MyDrive/path_to_your_data/all_data_cleaned_final.xlsx')
+    data = pd.read_excel('data/all_data_cleaned_final.xlsx')  # Ensure this path is correct relative to the root of your repository
     
     columns_to_convert = ['BHP, psia', 'THP, psia']
     for column in columns_to_convert:
@@ -80,26 +80,26 @@ def load_data():
 
 @st.cache_resource
 def load_models():
-    global_model_oil = joblib.load('/content/drive/MyDrive/path_to_your_models/global_model_oil_checkpoint.pkl')
-    global_model_water = joblib.load('/content/drive/MyDrive/path_to_your_models/global_model_water_checkpoint.pkl')
-    global_model_gas = joblib.load('/content/drive/MyDrive/path_to_your_models/global_model_gas_checkpoint.pkl')
+    global_model_oil = joblib.load('models/global_model_oil_checkpoint.pkl')
+    global_model_water = joblib.load('models/global_model_water_checkpoint.pkl')
+    global_model_gas = joblib.load('models/global_model_gas_checkpoint.pkl')
 
     cluster_models_oil = {}
     cluster_models_water = {}
     cluster_models_gas = {}
     for cluster in range(3):
-        cluster_models_oil[cluster] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/cluster_model_oil_checkpoint_{cluster}.pkl')
-        cluster_models_water[cluster] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/cluster_model_water_checkpoint_{cluster}.pkl')
-        cluster_models_gas[cluster] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/cluster_model_gas_checkpoint_{cluster}.pkl')
+        cluster_models_oil[cluster] = joblib.load(f'models/cluster_model_oil_checkpoint_{cluster}.pkl')
+        cluster_models_water[cluster] = joblib.load(f'models/cluster_model_water_checkpoint_{cluster}.pkl')
+        cluster_models_gas[cluster] = joblib.load(f'models/cluster_model_gas_checkpoint_{cluster}.pkl')
 
     well_models_oil = {}
     well_models_water = {}
     well_models_gas = {}
     production_wells = [f'J{num:02d}-P' for num in range(1, 69) if num != 68]
     for well in production_wells:
-        well_models_oil[well] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/well_model_oil_{well}.pkl')
-        well_models_water[well] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/well_model_water_{well}.pkl')
-        well_models_gas[well] = joblib.load(f'/content/drive/MyDrive/path_to_your_models/well_model_gas_{well}.pkl')
+        well_models_oil[well] = joblib.load(f'models/well_model_oil_{well}.pkl')
+        well_models_water[well] = joblib.load(f'models/well_model_water_{well}.pkl')
+        well_models_gas[well] = joblib.load(f'models/well_model_gas_{well}.pkl')
 
     return global_model_oil, global_model_water, global_model_gas, cluster_models_oil, cluster_models_water, cluster_models_gas, well_models_oil, well_models_water, well_models_gas
 
