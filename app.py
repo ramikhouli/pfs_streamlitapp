@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 @st.cache_resource
 def load_saved_data():
@@ -33,6 +33,13 @@ def forecast(models, data, feature_cols):
     for col, model in models.items():
         forecasts[col] = model.predict(data[feature_cols])
     return pd.DataFrame(forecasts, index=data.index)
+
+def calculate_metrics(true_values, predictions):
+    mse = mean_squared_error(true_values, predictions)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(true_values, predictions)
+    r2 = r2_score(true_values, predictions)
+    return mse, rmse, mae, r2
 
 def main():
     st.title('Oil Field Management Forecasting Tool')
@@ -103,13 +110,20 @@ def main():
                 st.write(f"  Baseline Forecast: {baseline_forecast.loc[test_data.index, col].mean():.2f}%")
                 st.write(f"  Modified Forecast: {modified_forecast.loc[test_data.index, col].mean():.2f}%")
 
-            # Calculate and display RMSE for test set
-            baseline_rmse = np.sqrt(mean_squared_error(test_data[col], baseline_forecast.loc[test_data.index, col]))
-            modified_rmse = np.sqrt(mean_squared_error(test_data[col], modified_forecast.loc[test_data.index, col]))
+                # Calculate and display metrics for test set
+                mse, rmse, mae, r2 = calculate_metrics(test_data[col], baseline_forecast.loc[test_data.index, col])
+                st.write(f"Metrics for {col} (Test Set - Baseline Forecast):")
+                st.write(f"  MSE: {mse:.2f}")
+                st.write(f"  RMSE: {rmse:.2f}")
+                st.write(f"  MAE: {mae:.2f}")
+                st.write(f"  R2: {r2:.2f}")
 
-            st.write(f"RMSE for {col} (Test Set):")
-            st.write(f"  Baseline Forecast: {baseline_rmse:.2f}")
-            st.write(f"  Modified Forecast: {modified_rmse:.2f}")
+                mse, rmse, mae, r2 = calculate_metrics(test_data[col], modified_forecast.loc[test_data.index, col])
+                st.write(f"Metrics for {col} (Test Set - Modified Forecast):")
+                st.write(f"  MSE: {mse:.2f}")
+                st.write(f"  RMSE: {rmse:.2f}")
+                st.write(f"  MAE: {mae:.2f}")
+                st.write(f"  R2: {r2:.2f}")
 
         else:
             st.error(f"No water cut data available for {selected_producing_well}")
