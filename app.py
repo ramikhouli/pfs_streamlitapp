@@ -80,32 +80,34 @@ def load_data():
 
 @st.cache_resource
 def load_models():
-    global_model_oil = joblib.load('models/global_model_oil_checkpoint.pkl')
-    global_model_water = joblib.load('models/global_model_water_checkpoint.pkl')
-    global_model_gas = joblib.load('models/global_model_gas_checkpoint.pkl')
+    models = {}
+    model_types = ['oil', 'water', 'gas']
+    levels = ['global', 'cluster', 'well']
 
-    cluster_models_oil = {}
-    cluster_models_water = {}
-    cluster_models_gas = {}
-    for cluster in range(3):
-        cluster_models_oil[cluster] = joblib.load(f'models/cluster_model_oil_checkpoint_{cluster}.pkl')
-        cluster_models_water[cluster] = joblib.load(f'models/cluster_model_water_checkpoint_{cluster}.pkl')
-        cluster_models_gas[cluster] = joblib.load(f'models/cluster_model_gas_checkpoint_{cluster}.pkl')
+    for level in levels:
+        for type in model_types:
+            if level == 'global':
+                try:
+                    models[f'{level}_{type}'] = joblib.load(f'models/global_model_{type}_checkpoint.pkl')
+                except FileNotFoundError:
+                    st.warning(f"Global {type} model not found.")
+            elif level == 'cluster':
+                models[f'{level}_{type}'] = {}
+                for cluster in range(3):
+                    try:
+                        models[f'{level}_{type}'][cluster] = joblib.load(f'models/cluster_model_{type}_checkpoint_{cluster}.pkl')
+                    except FileNotFoundError:
+                        st.warning(f"Cluster {type} model for cluster {cluster} not found.")
+            elif level == 'well':
+                models[f'{level}_{type}'] = {}
+                for well in [f'J{num:02d}-P' for num in range(1, 69) if num != 68]:
+                    try:
+                        models[f'{level}_{type}'][well] = joblib.load(f'models/well_model_{type}_{well}.pkl')
+                    except FileNotFoundError:
+                        pass  # Skip if well model doesn't exist
 
-    well_models_oil = {}
-    well_models_water = {}
-    well_models_gas = {}
-    production_wells = [f'J{num:02d}-P' for num in range(1, 69) if num != 68]
-    for well in production_wells:
-        try:
-            well_models_oil[well] = joblib.load(f'models/well_model_oil_{well}.pkl')
-            well_models_water[well] = joblib.load(f'models/well_model_water_{well}.pkl')
-            well_models_gas[well] = joblib.load(f'models/well_model_gas_{well}.pkl')
-        except FileNotFoundError:
-            print(f"Models for well {well} not found. Skipping.")
+    return models
 
-    return global_model_oil, global_model_water, global_model_gas, cluster_models_oil, cluster_models_water, cluster_models_gas, well_models_oil, well_models_water, well_models_gas
-    
 def simulate_injection_change(data, injection_well, rate_change):
     modified_data = data.copy()
     injection_rate_cols = [col for col in data.columns if col.startswith(f'{injection_well}_') and ('WI Rate' in col or 'GI Rate' in col)]
