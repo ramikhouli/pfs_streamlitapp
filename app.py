@@ -4,22 +4,18 @@ import pandas as pd
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error
 
 @st.cache_resource
 def load_saved_data():
-    try:
-        full_data = pd.read_pickle('test_data.pkl')  # Rename this to full_data as it contains all data
-        with open('models.pkl', 'rb') as f:
-            models = pickle.load(f)
-        with open('feature_cols.pkl', 'rb') as f:
-            feature_cols = pickle.load(f)
-        with open('target_cols.pkl', 'rb') as f:
-            target_cols = pickle.load(f)
-        return full_data, models, feature_cols, target_cols
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-        return None, None, None, None
+    full_data = pd.read_pickle('test_data.pkl')  # Rename this to full_data as it contains all data
+    with open('models.pkl', 'rb') as f:
+        models = pickle.load(f)
+    with open('feature_cols.pkl', 'rb') as f:
+        feature_cols = pickle.load(f)
+    with open('target_cols.pkl', 'rb') as f:
+        target_cols = pickle.load(f)
+    return full_data, models, feature_cols, target_cols
 
 def simulate_injection_change(data, injection_well, rate_change):
     modified_data = data.copy()
@@ -34,19 +30,10 @@ def forecast(models, data, feature_cols):
         forecasts[col] = model.predict(data[feature_cols])
     return pd.DataFrame(forecasts, index=data.index)
 
-def calculate_metrics(true_values, predictions):
-    mse = mean_squared_error(true_values, predictions)
-    rmse = np.sqrt(mse)
-    mae = mean_absolute_error(true_values, predictions)
-    r2 = r2_score(true_values, predictions)
-    return mse, rmse, mae, r2
-
 def main():
     st.title('Oil Field Management Forecasting Tool')
 
     full_data, models, feature_cols, target_cols = load_saved_data()
-    if full_data is None:
-        return
 
     # Debug information
     st.sidebar.write("Debug Information:")
@@ -110,20 +97,13 @@ def main():
                 st.write(f"  Baseline Forecast: {baseline_forecast.loc[test_data.index, col].mean():.2f}%")
                 st.write(f"  Modified Forecast: {modified_forecast.loc[test_data.index, col].mean():.2f}%")
 
-                # Calculate and display metrics for test set
-                mse, rmse, mae, r2 = calculate_metrics(test_data[col], baseline_forecast.loc[test_data.index, col])
-                st.write(f"Metrics for {col} (Test Set - Baseline Forecast):")
-                st.write(f"  MSE: {mse:.2f}")
-                st.write(f"  RMSE: {rmse:.2f}")
-                st.write(f"  MAE: {mae:.2f}")
-                st.write(f"  R2: {r2:.2f}")
+            # Calculate and display RMSE for test set
+            baseline_rmse = np.sqrt(mean_squared_error(test_data[col], baseline_forecast.loc[test_data.index, col]))
+            modified_rmse = np.sqrt(mean_squared_error(test_data[col], modified_forecast.loc[test_data.index, col]))
 
-                mse, rmse, mae, r2 = calculate_metrics(test_data[col], modified_forecast.loc[test_data.index, col])
-                st.write(f"Metrics for {col} (Test Set - Modified Forecast):")
-                st.write(f"  MSE: {mse:.2f}")
-                st.write(f"  RMSE: {rmse:.2f}")
-                st.write(f"  MAE: {mae:.2f}")
-                st.write(f"  R2: {r2:.2f}")
+            st.write(f"RMSE for {col} (Test Set):")
+            st.write(f"  Baseline Forecast: {baseline_rmse:.2f}")
+            st.write(f"  Modified Forecast: {modified_rmse:.2f}")
 
         else:
             st.error(f"No water cut data available for {selected_producing_well}")
